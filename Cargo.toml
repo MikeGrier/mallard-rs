@@ -1,0 +1,14 @@
+# Copyright (c) 2026, Michael Grier.
+
+[workspace]
+members = ["crates/mallard"]
+resolver = "2"
+
+[workspace.dependencies]
+clap = { version = "4", features = ["derive"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"
