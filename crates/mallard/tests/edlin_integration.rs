@@ -50,7 +50,9 @@ fn run(script: &Path, output: &Path, extra: &[&str]) -> (String, String) {
 }
 
 fn read_output(path: &Path) -> Vec<u8> {
-    std::fs::read(path).unwrap_or_default()
+    std::fs::read(path).unwrap_or_else(|err| {
+        panic!("failed to read output file {}: {err}", path.display())
+    })
 }
 
 // ── 1: empty buffer save produces empty file ─────────────────────────────────
