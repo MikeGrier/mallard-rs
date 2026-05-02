@@ -27,6 +27,7 @@ fn lcg_next(state: u64) -> u64 {
 }
 
 #[test]
+#[ignore = "wall-clock gate; run explicitly with `cargo test -- --ignored large_buffer_performance`"]
 fn large_buffer_performance() {
     // ── 1. Build 500,000-line input string ───────────────────────────────────
     let mut input = String::with_capacity(LINES * 14);
