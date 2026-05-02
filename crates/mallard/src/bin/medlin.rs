@@ -305,13 +305,14 @@ fn dispatch(ctx: &mut Context<'_>, line: &str) -> bool {
             let Some(idx) = parse_line_number(n_str) else {
                 return true;
             };
-            if let Err(e) = ctx.buf.replace_line(idx, text) {
+            if idx >= ctx.buf.line_count() {
                 eprintln!(
-                    "edlin: r: line {} out of range (line_count = {}): {}",
+                    "edlin: r: line {} out of range (line_count = {})",
                     idx + 1,
-                    ctx.buf.line_count(),
-                    e
+                    ctx.buf.line_count()
                 );
+            } else if let Err(e) = ctx.buf.replace_line(idx, text) {
+                eprintln!("edlin: r: {}", e);
             }
         }
 
