@@ -102,21 +102,22 @@ impl Branch {
     ///
     /// # Errors
     /// Returns `Err` if the validator rejects `content` or if `n > line_count()`.
-    ///
-    /// # Panics
-    /// Panics if `n > line_count()` — callers must keep `n` in range.
     pub fn insert_line(
         &mut self,
         n: usize,
         content: &str,
         validator: Option<&dyn EncodingValidator>,
     ) -> Result<(), EncodingError> {
-        assert!(
-            n <= self.lines.len(),
-            "insert_line: index {} out of range (line_count = {})",
-            n,
-            self.lines.len()
-        );
+        if n > self.lines.len() {
+            return Err(EncodingError::new(
+                content,
+                format!(
+                    "insert_line: index {} out of range (line_count = {})",
+                    n,
+                    self.lines.len()
+                ),
+            ));
+        }
         if let Some(v) = validator {
             v.validate(content)?;
         }
