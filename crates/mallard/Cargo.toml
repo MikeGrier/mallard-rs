@@ -4,6 +4,13 @@
 name = "mallard"
 version = "0.1.0"
 edition = "2024"
+authors = ["Mike Grier"]
+description = "A line-oriented text buffer using an immutable green/red model with cheap branching and undo/redo."
+license = "MIT"
+repository = "https://github.com/MikeGrier/mallard-rs"
+readme = "../../README.md"
+keywords = ["text", "buffer", "editor", "lines", "undo"]
+categories = ["text-processing", "data-structures"]
 
 [[bin]]
 name = "medlin"
