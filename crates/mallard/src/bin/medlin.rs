@@ -146,7 +146,15 @@ fn load_file(path: &Path, encoding: Option<&'static Encoding>) -> LineBuffer {
             }
         };
         // Decode with encoding_rs; unmappable bytes become U+FFFD.
-        let (text, _used, _had_errors) = enc.decode(&bytes);
+        let (text, _used, had_errors) = enc.decode(&bytes);
+        if had_errors {
+            eprintln!(
+                "edlin: load: {}: file contains bytes that are invalid in encoding '{}'",
+                path.display(),
+                enc.name()
+            );
+            return empty_buf_with_enc(enc);
+        }
         let mut lb = LineBuffer::new(Some(Arc::new(ForcedEncodingValidator { encoding: enc })));
         for line in text.lines() {
             if let Err(e) = lb.insert_line(lb.line_count(), line) {
@@ -174,10 +182,11 @@ fn load_file(path: &Path, encoding: Option<&'static Encoding>) -> LineBuffer {
 
 /// Save the buffer to `path` with the configured line ending.
 ///
-/// When `encoding` is `Some`, each line and line-ending are encoded into the
-/// target encoding's byte representation before writing.  All WHATWG encodings
-/// are ASCII supersets, so line-ending bytes are stable across encodings.
-/// When `None`, the buffer is written as plain UTF-8.
+/// When `encoding` is `Some`, each line and its line-ending are concatenated
+/// and encoded together into the target encoding before writing.  Encoding the
+/// terminator through the encoder (rather than writing raw bytes) ensures
+/// correctness for any encoding.  When `None`, the buffer is written as plain
+/// UTF-8.
 fn save(buf: &LineBuffer, path: &Path, line_ending: &str, encoding: Option<&'static Encoding>) {
     let file = match std::fs::File::create(path) {
         Ok(f) => f,
@@ -189,18 +198,19 @@ fn save(buf: &LineBuffer, path: &Path, line_ending: &str, encoding: Option<&'sta
     let mut writer = io::BufWriter::new(file);
 
     if let Some(enc) = encoding {
-        // Encode each line + terminator into the target encoding.
-        let terminator_bytes = line_ending.as_bytes(); // safe: always ASCII
+        // Encode each line + terminator together through the target encoding.
         let count = buf.line_count();
         for i in 0..count {
             let line = buf.get_line(i).expect("line index in range");
+            // Concatenate line content and terminator so both go through the encoder.
+            let line_with_ending = format!("{}{}", line, line_ending);
             let mut encoder = enc.new_encoder();
             let capacity = encoder
-                .max_buffer_length_from_utf8_if_no_unmappables(line.len())
-                .unwrap_or_else(|| line.len().saturating_mul(4).max(16));
+                .max_buffer_length_from_utf8_if_no_unmappables(line_with_ending.len())
+                .unwrap_or_else(|| line_with_ending.len().saturating_mul(4).max(16));
             let mut out = vec![0u8; capacity];
             let (result, _read, written) =
-                encoder.encode_from_utf8_without_replacement(&line, &mut out, true);
+                encoder.encode_from_utf8_without_replacement(&line_with_ending, &mut out, true);
             match result {
                 encoding_rs::EncoderResult::InputEmpty => {
                     if let Err(e) = writer.write_all(&out[..written]) {
@@ -216,10 +226,6 @@ fn save(buf: &LineBuffer, path: &Path, line_ending: &str, encoding: Option<&'sta
                     );
                     return;
                 }
-            }
-            if let Err(e) = writer.write_all(terminator_bytes) {
-                eprintln!("edlin: save: {}: {}", path.display(), e);
-                return;
             }
         }
     } else if let Err(e) = buf.write_lines(&mut writer, line_ending) {
