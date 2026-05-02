@@ -59,11 +59,11 @@ impl LineBuffer {
             if error.is_some() {
                 return;
             }
-            if let Some(v) = validator.as_deref() {
-                if let Err(e) = v.validate(line) {
-                    error = Some(e);
-                    return;
-                }
+            if let Some(v) = validator.as_deref()
+                && let Err(e) = v.validate(line)
+            {
+                error = Some(e);
+                return;
             }
             let id = pool.lock().unwrap().intern(line);
             root.lines.push(id);
